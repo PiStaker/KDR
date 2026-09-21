@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OSRS KDR Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1b1b1b url('https://oldschool.runescape.wiki/images/Stone_wall.png') repeat;
+            color: #f5e6c8;
+            text-align: center;
+            padding-top: 20px;
+        }
+        h1 {
+            font-size: 36px;
+            color: #f5e6c8;
+            text-shadow: 2px 2px #000;
+        }
+        button, input {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 6px;
+            border: 2px solid #c9a441;
+            border-radius: 6px;
+            background: #3a2f1b;
+            color: #f5e6c8;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #4a3b22;
+        }
+        input {
+            background: #2b2416;
+        }
+        img.icon {
+            width: 24px;
+            height: 24px;
+            display: block;
+        }
+
+        /* Buttons with icons */
+        #deathBtn { background: #5b1f1f; }
+        #staffBtn { background: #3b245b; }
+        #settingsBtn { background: #166f5b; }
+        #syncPanelBtn { background: #8e7b2f; }
+
+        /* Buttons without icons but matching height */
+        button.no-icon {
+            min-height: 48px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Toolbar row for Undo / Reset / Settings / History / Sync */
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        #stats {
+            font-size: 24px;
+            margin-top: 20px;
+            line-height: 1.6;
+            background: rgba(0,0,0,0.6);
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #c9a441;
+        }
+        #staffLog {
+            margin-top: 15px;
+            font-size: 20px;
+        }
+        #killInput, #deathInput {
+            width: 220px;
+            text-align: center;
+        }
+        .panel {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #2b2416;
+            border-radius: 10px;
+            border: 2px solid #c9a441;
+            width: 90%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+            background: #3a2f1b;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #2b2416;
+        }
+        th {
+            background: #4a3b22;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>OSRS KDR Tracker</h1>
+
+    <div id="stats"></div>
+
+    <br>
+
+    <!-- Death -->
+    <button id="deathBtn">
+        <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
+        <span>Death (-128,000)</span>
+    </button>
+
+    <!-- Staff Loss -->
+    <button id="staffBtn">
+        <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
+        <span>Staff Loss (-60,000)</span>
+    </button>
+
+    <br>
+
+    <!-- Kill input -->
+    <input id="killInput" placeholder="Kill (Key Value)">
+    <button id="killAddBtn" class="no-icon">Add Kill</button>
+
+    <!-- Toolbar row -->
+    <div class="toolbar">
+        <button id="undoBtn" class="no-icon">Undo</button>
+        <button id="resetBtn" class="no-icon">Reset</button>
+
+        <button id="settingsBtn">
+            <img class="icon" src="https://oldschool.runescape.wiki/images/Settings.png?99265">
+            <span>Settings</span>
+        </button>
+
+        <button id="historyBtn" class="no-icon">History</button>
+
+        <button id="syncPanelBtn">
+            <img class="icon" src="https://oldschool.runescape.wiki/images/World_map_icon.png">
+            <span>Sync</span>
+        </button>
+    </div>
+
+    <div id="staffLog"></div>
+
+    <!-- SYNC PANEL -->
+    <div class="panel" id="syncPanel">
+        <h2>Snapshot Sync</h2>
+
+        <button id="downloadSnapshot" class="no-icon">Download Snapshot</button>
+        <br><br>
+
+        <input type="file" id="uploadSnapshotFile" accept=".json">
+        <button id="uploadSnapshot" class="no-icon">Upload Snapshot</button>
+
+        <p style="margin-top:10px; font-size:14px; color:#c9a441;">
+            Snapshot sync merges laptop ↔ phone stats safely.
+        </p>
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div class="panel" id="settingsPanel">
+        <h2>Settings</h2>
+        <input id="deathInput" placeholder="Death value (e.g. 128k, 2m)">
+        <button id="saveSettingsBtn">Save Death Value</button>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="panel" id="historyPanel">
+        <h2>History</h2>
+        <div id="historyTable"></div>
+        <br>
+        <button id="exportCSV" class="no-icon">Export CSV</button>
+        <button id="exportExcel" class="no-icon">Export Excel</button>
+    </div>
+
+<script>
+/* --- Local State --- */
+const todayKey = "kdr-" + new Date().toISOString().slice(0, 10);
+
+let saved = JSON.parse(localStorage.getItem(todayKey)) || {};
+let total = saved.total ?? 0;
+let kills = saved.kills ?? 0;
+let deaths = saved.deaths ?? 0;
+let staffLossCount = saved.staffLossCount ?? 0;
+let deathValue = saved.deathValue ?? 128000;
+
+let historyStack = [];
+
+/* --- UI Update --- */
+function updateDisplay() {
+    let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
+
+    document.getElementById("stats").innerHTML =
+        "Total: " + total.toLocaleString() + "<br>" +
+        "Kills: " + kills + "<br>" +
+        "Deaths: " + deaths + "<br>" +
+        "K/D Ratio: " + kd;
+
+    document.getElementById("staffLog").innerHTML =
+        "<strong>Staff Losses:</strong> " + staffLossCount;
+
+    document.querySelector("#deathBtn span").textContent =
+        "Death (-" + deathValue.toLocaleString() + ")";
+}
+
+/* --- Helpers --- */
+function saveState() {
+    historyStack.push({
+        total,
+        kills,
+        deaths,
+        staffLossCount,
+        deathValue
+    });
+}
+
+function saveLocal() {
+    localStorage.setItem(todayKey, JSON.stringify({
+        total,
+        kills,
+        deaths,
+        staffLossCount,
+        deathValue
+    }));
+}
+
+function parseInput(input) {
+    input = input.trim().toLowerCase();
+
+    if (input.endsWith("m")) return parseFloat(input.slice(0, -1)) * 1000000;
+    if (input.endsWith("k")) return parseFloat(input.slice(0, -1)) * 1000;
+
+    let num = parseFloat(input);
+    if (!isNaN(num)) return num * 1000;
+
+    return NaN;
+}
+
+/* --- Kill Add --- */
+function addKill() {
+    let raw = document.getElementById("killInput").value;
+    let parsed = parseInput(raw);
+
+    if (!isNaN(parsed)) {
+        saveState();
+        total += parsed;
+        kills++;
+        saveLocal();
+        updateDisplay();
+        document.getElementById("killInput").value = "";
+    } else {
+        alert("Enter a valid number.");
+    }
+}
+
+document.getElementById("killAddBtn").onclick = addKill;
+document.getElementById("killInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addKill();
+});
+
+/* --- Death --- */
+document.getElementById("deathBtn").onclick = () => {
+    saveState();
+    total -= deathValue;
+    deaths++;
+    saveLocal();
+    updateDisplay();
+};
+
+/* --- Staff Loss --- */
+document.getElementById("staffBtn").onclick = () => {
+    saveState();
+    total -= 60000;
+    staffLossCount++;
+    saveLocal();
+    updateDisplay();
+};
+
+/* --- Undo --- */
+document.getElementById("undoBtn").onclick = () => {
+    if (historyStack.length === 0) {
+        alert("Nothing to undo.");
+        return;
+    }
+    let prev = historyStack.pop();
+    total = prev.total;
+    kills = prev.kills;
+    deaths = prev.deaths;
+    staffLossCount = prev.staffLossCount;
+    deathValue = prev.deathValue;
+    saveLocal();
+    updateDisplay();
+};
+
+/* --- Reset --- */
+document.getElementById("resetBtn").onclick = () => {
+    if (!confirm("Are you sure you want to clear all of today's data?")) {
+        return;
+    }
+
+    saveState();
+    total = 0;
+    kills = 0;
+    deaths = 0;
+    staffLossCount = 0;
+    saveLocal();
+    updateDisplay();
+};
+
+
+/* --- Panels --- */
+function togglePanel(id) {
+    const panel = document.getElementById(id);
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+document.getElementById("settingsBtn").onclick = () => togglePanel("settingsPanel");
+document.getElementById("historyBtn").onclick = () => {
+    const panel = document.getElementById("historyPanel");
+
+    // Simple toggle
+    panel.style.display =
+        (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
+
+    // Only load when visible
+    if (panel.style.display === "block") {
+        loadHistory();
+    }
+};
+document.getElementById("syncPanelBtn").onclick = () => togglePanel("syncPanel");
+
+/* --- Settings --- */
+document.getElementById("saveSettingsBtn").onclick = () => {
+    let raw = document.getElementById("deathInput").value;
+    let parsed = parseInput(raw);
+
+    if (!isNaN(parsed)) {
+        saveState();
+        deathValue = parsed;
+        saveLocal();
+        updateDisplay();
+        document.getElementById("deathInput").value = "";
+        alert("Death value updated.");
+    } else {
+        alert("Enter a valid number.");
+    }
+};
+
+/* --- History --- */
+function loadHistory() {
+    document.getElementById("historyTable").innerHTML = "";
+
+    let keys = Object.keys(localStorage).filter(k => {
+        return /^kdr-\d{4}-\d{2}-\d{2}$/.test(k);
+    });
+
+    keys.sort();
+
+    let rows = keys.map(k => {
+        let d = JSON.parse(localStorage.getItem(k));
+
+        return `
+            <tr>
+                <td>${k.replace("kdr-", "")}</td>
+                <td>${(d.total ?? 0).toLocaleString()}</td>
+                <td>${d.kills ?? 0}</td>
+                <td>${d.deaths ?? 0}</td>
+                <td>${d.staffLossCount ?? 0}</td>
+            </tr>
+        `;
+    }).join("");
+
+    document.getElementById("historyTable").innerHTML = `
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Kills</th>
+                <th>Deaths</th>
+                <th>Staff Losses</th>
+            </tr>
+            ${rows}
+        </table>
+    `;
+}; 
+
+
+/* --- Export CSV --- */
+document.getElementById("exportCSV").onclick = () => {
+    let keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
+    keys.sort();
+    let csv = "Date,Total,Kills,Deaths,StaffLosses\n";
+
+    keys.forEach(k => {
+        let d = JSON.parse(localStorage.getItem(k));
+        csv += `${k.replace("kdr-", "")},${d.total ?? 0},${d.kills ?? 0},${d.deaths ?? 0},${d.staffLossCount ?? 0}\n`;
+    });
+
+    let blob = new Blob([csv], { type: "text/csv" });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "kdr_history.csv";
+    a.click();
+};
+
+/* --- Export Excel --- */
+document.getElementById("exportExcel").onclick = () => {
+    let keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
+    keys.sort();
+    let rows = keys.map(k => {
+        let d = JSON.parse(localStorage.getItem(k));
+        return [
+            k.replace("kdr-", ""),
+            d.total ?? 0,
+            d.kills ?? 0,
+            d.deaths ?? 0,
+            d.staffLossCount ?? 0
+        ];
+    });
+
+    let excel = `
+        <table>
+            <tr><th>Date</th><th>Total</th><th>Kills</th><th>Deaths</th><th>StaffLosses</th></tr>
+            ${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}
+        </table>
+    `;
+
+    let blob = new Blob([excel], { type: "application/vnd.ms-excel" });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "kdr_history.xls";
+    a.click();
+};
+
+/* -----------------------------------------------------------
+   SNAPSHOT SYNC (UPLOAD + DOWNLOAD)
+----------------------------------------------------------- */
+
+/* --- Download Snapshot --- */
+document.getElementById("downloadSnapshot").onclick = () => {
+    let snapshot = {
+        today: {
+            total,
+            kills,
+            deaths,
+            staffLossCount,
+            deathValue
+        },
+        history: {}
+    };
+
+    let keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
+    keys.forEach(k => {
+        snapshot.history[k] = JSON.parse(localStorage.getItem(k));
+    });
+
+    let blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "kdr_snapshot.json";
+    a.click();
+};
+
+/* --- Upload Snapshot --- */
+document.getElementById("uploadSnapshot").onclick = () => {
+    let fileInput = document.getElementById("uploadSnapshotFile");
+    if (!fileInput.files.length) {
+        alert("Select a snapshot file first.");
+        return;
+    }
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let snapshot = JSON.parse(e.target.result);
+
+            /* --- Merge Today --- */
+            total += snapshot.today.total;
+            kills += snapshot.today.kills;
+            deaths += snapshot.today.deaths;
+            staffLossCount += snapshot.today.staffLossCount;
+
+            /* snapshot deathValue wins */
+            deathValue = snapshot.today.deathValue;
+
+            saveLocal();
+
+/* --- Merge History (Option A: only merge if incoming is newer) --- */
+Object.keys(snapshot.history).forEach(key => {
+    let incoming = snapshot.history[key];
+    let local = JSON.parse(localStorage.getItem(key));
+
+    // If the day does not exist locally, add it
+    if (!local) {
+        localStorage.setItem(key, JSON.stringify(incoming));
+        return;
+    }
+
+    // Compare dates: only merge if incoming snapshot is newer
+    let incomingDate = new Date(key.replace("kdr-", ""));
+    let localDate = new Date(key.replace("kdr-", ""));
+
+    // If dates match, skip merging to prevent doubling
+    if (incomingDate.getTime() === localDate.getTime()) {
+        return;
+    }
+
+    // If incoming is newer, replace local
+    if (incomingDate > localDate) {
+        localStorage.setItem(key, JSON.stringify(incoming));
+    }
+});
+
+            updateDisplay();
+            alert("Snapshot merged successfully.");
+
+        } catch (err) {
+            alert("Invalid snapshot file.");
+        }
+    };
+
+    reader.readAsText(fileInput.files[0]);
+};
+
+updateDisplay();
+</script>
+
+</body>
+</html>
