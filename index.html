@@ -43,17 +43,20 @@ img.icon {
     display: block;
 }
 
-/* Base button styles applied to ALL buttons */
-button {
+/* Buttons */
+#deathBtn { background: #5b1f1f; }
+#staffBtn { background: #3b245b; }
+#settingsBtn { background: #166f5b; }
+#ConsumableBtn { background: #166f5b; }
+    
+/* Buttons without icons */
+button.no-icon {
     min-height: 48px;
-    padding: 10px 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box; /* Ensures padding does not increase 48px total height */
-    border: none;
-    cursor: pointer;
-    color: #ffffff;
 }
 
 /* Toolbar */
