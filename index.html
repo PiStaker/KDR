@@ -167,8 +167,10 @@ th {
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
-    <input id="deathInput" placeholder="Death value (e.g. 128k, 2m)">
+    <input id="deathInput" placeholder="Death value (Amount to Loose)">
     <button id="saveSettingsBtn">Save Death Value</button>
+    <input id="consumableInput" placeholder="Consumables value (Consumables Cost)">
+    
 </div>
 
 <!-- HISTORY PANEL -->
@@ -190,6 +192,7 @@ let kills = saved.kills ?? 0;
 let deaths = saved.deaths ?? 0;
 let staffLossCount = saved.staffLossCount ?? 0;
 let deathValue = saved.deathValue ?? 128000;
+let consumableValue = saved.consumableValue ?? 25000;
 let historyStack = [];
 
 /* --- UI Update --- */
@@ -216,7 +219,8 @@ function saveState() {
         kills,
         deaths,
         staffLossCount,
-        deathValue
+        deathValue,
+        consumableValue
     });
 }
 
@@ -226,7 +230,8 @@ function saveLocal() {
         kills,
         deaths,
         staffLossCount,
-        deathValue
+        deathValue,
+        consumableValue
     }));
 }
 
@@ -279,6 +284,14 @@ document.getElementById("staffBtn").onclick = () => {
     updateDisplay();
 };
 
+document.getElementById("ConsumableBtn").onclick = () => {
+saveState();
+total -= consumableValue;
+saveLocal();
+updateDisplay();
+};
+
+    
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
     if (historyStack.length === 0) {
@@ -333,19 +346,32 @@ document.getElementById("historyBtn").onclick = () => {
 
 /* --- Settings --- */
 document.getElementById("saveSettingsBtn").onclick = () => {
-    let raw = document.getElementById("deathInput").value;
-    let parsed = parseInput(raw);
-
-    if (!isNaN(parsed)) {
-        saveState();
-        deathValue = parsed;
-        saveLocal();
-        updateDisplay();
-        document.getElementById("deathInput").value = "";
-        alert("Death value updated.");
-    } else {
-        alert("Enter a valid number.");
-    }
+ 
+let deathParsed = parseInput(
+document.getElementById("deathInput").value
+);
+ 
+let consumableParsed = parseInput(
+document.getElementById("consumableInput").value
+);
+ 
+saveState();
+ 
+if (!isNaN(deathParsed)) {
+deathValue = deathParsed;
+}
+ 
+if (!isNaN(consumableParsed)) {
+consumableValue = consumableParsed;
+}
+ 
+saveLocal();
+updateDisplay();
+ 
+document.getElementById("deathInput").value = "";
+document.getElementById("consumableInput").value = "";
+ 
+alert("Settings updated.");
 };
 
 /* --- History --- */
