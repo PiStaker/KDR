@@ -75,7 +75,7 @@ img.icon {
     margin-top: 15px;
     font-size: 20px;
 }
-#killInput, #deathInput {
+#killInput, #deathInput, #consumableInput {
     width: 220px;
     text-align: center;
 }
@@ -137,7 +137,6 @@ th {
 <!-- Toolbar -->
 <div class="toolbar">
     <button id="undoBtn">Undo</button>
-    <button id="resetBtn">Reset</button>
     <button id="settingsBtn">
         <img class="icon" src="https://oldschool.runescape.wiki/images/Settings.png?99265">
         <span>Settings</span>
@@ -150,8 +149,10 @@ th {
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
     <input id="deathInput" placeholder="Death value (Amount to Loose)">
-    <button id="saveSettingsBtn">Save Death Value</button>
     <input id="consumableInput" placeholder="Consumables value (Consumables Cost)">
+    <br><br>
+    <button id="saveSettingsBtn">Save Values</button>
+    <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
 </div>
 
 <!-- HISTORY PANEL -->
@@ -283,7 +284,7 @@ document.getElementById("undoBtn").onclick = () => {
     updateDisplay();
 };
 
-/* --- Reset --- */
+/* --- Reset (Inside Settings Panel) --- */
 document.getElementById("resetBtn").onclick = () => {
     if (!confirm("Are you sure you want to clear all of today's data?")) {
         return;
@@ -295,6 +296,7 @@ document.getElementById("resetBtn").onclick = () => {
     staffLossCount = 0;
     saveLocal();
     updateDisplay();
+    alert("Today's data has been reset.");
 };
 
 /* --- Panels --- */
