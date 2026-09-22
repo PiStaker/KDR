@@ -140,7 +140,7 @@ th {
 <!-- Consumables -->
 <button id="ConsumableBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish.png?f0f17">
-    <span>Consumables</span>
+    <span id="consumableText">Consumables</span>
 </button>
 
 
@@ -210,6 +210,9 @@ function updateDisplay() {
 
     document.querySelector("#deathBtn span").textContent =
         "Death (-" + deathValue.toLocaleString() + ")";
+
+    document.getElementById("consumableText").textContent =
+"Consumables (-" + consumableValue.toLocaleString() + ")";
 }
 
 /* --- Helpers --- */
@@ -284,6 +287,8 @@ document.getElementById("staffBtn").onclick = () => {
     updateDisplay();
 };
 
+
+    /* --- Consumable Consumption --- */
 document.getElementById("ConsumableBtn").onclick = () => {
 saveState();
 total -= consumableValue;
