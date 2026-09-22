@@ -3,7 +3,6 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <head>
 <title>OSRS KDR Tracker</title>
-
 <style>
 body {
     font-family: Arial, sans-serif;
@@ -17,9 +16,12 @@ h1 {
     color: #f5e6c8;
     text-shadow: 2px 2px #000;
 }
+
+/* Base button and input layout */
 button, input {
     font-size: 18px;
-    padding: 10px 20px;
+    height: 48px;
+    padding: 0 16px;
     margin: 6px;
     border: 2px solid #c9a441;
     border-radius: 6px;
@@ -30,6 +32,8 @@ button, input {
     justify-content: center;
     gap: 8px;
     cursor: pointer;
+    box-sizing: border-box;
+    vertical-align: middle;
 }
 button:hover {
     background: #4a3b22;
@@ -40,24 +44,14 @@ input {
 img.icon {
     width: 24px;
     height: 24px;
-    display: block;
+    display: inline-block;
 }
 
-/* Buttons */
+/* Button Colors */
 #deathBtn { background: #5b1f1f; }
 #staffBtn { background: #3b245b; }
 #settingsBtn { background: #166f5b; }
 #ConsumableBtn { background: #166f5b; }
-    
-/* Buttons without icons */
-button.no-icon {
-    min-height: 48px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
 
 /* Toolbar */
 .toolbar {
@@ -67,7 +61,6 @@ button.no-icon {
     gap: 6px;
     margin-top: 10px;
 }
-
 #stats {
     font-size: 24px;
     margin-top: 20px;
@@ -78,17 +71,14 @@ button.no-icon {
     border-radius: 10px;
     border: 2px solid #c9a441;
 }
-
 #staffLog {
     margin-top: 15px;
     font-size: 20px;
 }
-
 #killInput, #deathInput {
     width: 220px;
     text-align: center;
 }
-
 .panel {
     display: none;
     margin-top: 20px;
@@ -101,7 +91,6 @@ button.no-icon {
     margin-left: auto;
     margin-right: auto;
 }
-
 table {
     width: 100%;
     margin-top: 10px;
@@ -117,54 +106,44 @@ th {
 }
 </style>
 </head>
-
 <body>
-
 <h1>OSRS KDR Tracker</h1>
-
 <div id="stats"></div>
 <br>
-
 <!-- Death -->
 <button id="deathBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
     <span> Death </span>
 </button>
-
 <!-- Staff Loss -->
 <button id="staffBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
     <span>Staff Loss</span>
 </button>
-
 <!-- Consumables -->
 <button id="ConsumableBtn">
-<img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
-<span id="consumableText">Consumables</span>
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
+    <span id="consumableText">Consumables</span>
 </button>
-
-
     
 <br>
-
 <!-- Kill input and button -->
 <input id="killInput" placeholder="Kill (Key Value)">
 <button id="killAddBtn">
-  <img class="icon" src="https://oldschool.runescape.wiki/images/Strength_icon_%28detail%29.png?a4903" alt="Strength Icon">
-  <span id="killAddText">Add Kill</span>
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Strength_icon_%28detail%29.png?a4903" alt="Strength Icon">
+    <span id="killAddText">Add Kill</span>
 </button>
 
 <!-- Toolbar -->
 <div class="toolbar">
-    <button id="undoBtn" class="no-icon">Undo</button>
-    <button id="resetBtn" class="no-icon">Reset</button>
+    <button id="undoBtn">Undo</button>
+    <button id="resetBtn">Reset</button>
     <button id="settingsBtn">
         <img class="icon" src="https://oldschool.runescape.wiki/images/Settings.png?99265">
         <span>Settings</span>
     </button>
-    <button id="historyBtn" class="no-icon">History</button>
+    <button id="historyBtn">History</button>
 </div>
-
 <div id="staffLog"></div>
 
 <!-- SETTINGS PANEL -->
@@ -173,7 +152,6 @@ th {
     <input id="deathInput" placeholder="Death value (Amount to Loose)">
     <button id="saveSettingsBtn">Save Death Value</button>
     <input id="consumableInput" placeholder="Consumables value (Consumables Cost)">
-    
 </div>
 
 <!-- HISTORY PANEL -->
@@ -181,14 +159,13 @@ th {
     <h2>History</h2>
     <div id="historyTable"></div>
     <br>
-    <button id="exportCSV" class="no-icon">Export CSV</button>
-    <button id="exportExcel" class="no-icon">Export Excel</button>
+    <button id="exportCSV">Export CSV</button>
+    <button id="exportExcel">Export Excel</button>
 </div>
 
 <script>
 /* --- Local State --- */
 const todayKey = "kdr-" + new Date().toISOString().slice(0, 10);
-
 let saved = JSON.parse(localStorage.getItem(todayKey)) || {};
 let total = saved.total ?? 0;
 let kills = saved.kills ?? 0;
@@ -201,21 +178,17 @@ let historyStack = [];
 /* --- UI Update --- */
 function updateDisplay() {
     let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
-
     document.getElementById("stats").innerHTML =
         "Total: " + total.toLocaleString() + "<br>" +
         "Kills: " + kills + "<br>" +
         "Deaths: " + deaths + "<br>" +
         "K/D Ratio: " + kd;
-
     document.getElementById("staffLog").innerHTML =
         "<strong>Staff Losses:</strong> " + staffLossCount;
-
     document.querySelector("#deathBtn span").textContent =
         "Death (-" + deathValue.toLocaleString() + ")";
-
     document.getElementById("consumableText").textContent =
-"Consumables (-" + consumableValue.toLocaleString() + ")";
+        "Consumables (-" + consumableValue.toLocaleString() + ")";
 }
 
 /* --- Helpers --- */
@@ -229,7 +202,6 @@ function saveState() {
         consumableValue
     });
 }
-
 function saveLocal() {
     localStorage.setItem(todayKey, JSON.stringify({
         total,
@@ -240,7 +212,6 @@ function saveLocal() {
         consumableValue
     }));
 }
-
 function parseInput(input) {
     input = input.trim().toLowerCase();
     if (input.endsWith("m")) return parseFloat(input.slice(0, -1)) * 1000000;
@@ -254,7 +225,6 @@ function parseInput(input) {
 function addKill() {
     let raw = document.getElementById("killInput").value;
     let parsed = parseInput(raw);
-
     if (!isNaN(parsed)) {
         saveState();
         total += parsed;
@@ -266,7 +236,6 @@ function addKill() {
         alert("Enter a valid number.");
     }
 }
-
 document.getElementById("killAddBtn").onclick = addKill;
 document.getElementById("killInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addKill();
@@ -290,15 +259,13 @@ document.getElementById("staffBtn").onclick = () => {
     updateDisplay();
 };
 
-
-    /* --- Consumable Consumption --- */
+/* --- Consumable Consumption --- */
 document.getElementById("ConsumableBtn").onclick = () => {
-saveState();
-total -= consumableValue;
-saveLocal();
-updateDisplay();
+    saveState();
+    total -= consumableValue;
+    saveLocal();
+    updateDisplay();
 };
-
     
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
@@ -306,14 +273,12 @@ document.getElementById("undoBtn").onclick = () => {
         alert("Nothing to undo.");
         return;
     }
-
     let prev = historyStack.pop();
     total = prev.total;
     kills = prev.kills;
     deaths = prev.deaths;
     staffLossCount = prev.staffLossCount;
     deathValue = prev.deathValue;
-
     saveLocal();
     updateDisplay();
 };
@@ -323,13 +288,11 @@ document.getElementById("resetBtn").onclick = () => {
     if (!confirm("Are you sure you want to clear all of today's data?")) {
         return;
     }
-
     saveState();
     total = 0;
     kills = 0;
     deaths = 0;
     staffLossCount = 0;
-
     saveLocal();
     updateDisplay();
 };
@@ -339,14 +302,11 @@ function togglePanel(id) {
     const panel = document.getElementById(id);
     panel.style.display = panel.style.display === "none" ? "block" : "none";
 }
-
 document.getElementById("settingsBtn").onclick = () => togglePanel("settingsPanel");
-
 document.getElementById("historyBtn").onclick = () => {
     const panel = document.getElementById("historyPanel");
     panel.style.display =
         (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
-
     if (panel.style.display === "block") {
         loadHistory();
     }
@@ -354,44 +314,38 @@ document.getElementById("historyBtn").onclick = () => {
 
 /* --- Settings --- */
 document.getElementById("saveSettingsBtn").onclick = () => {
- 
-let deathParsed = parseInput(
-document.getElementById("deathInput").value
-);
- 
-let consumableParsed = parseInput(
-document.getElementById("consumableInput").value
-);
- 
-saveState();
- 
-if (!isNaN(deathParsed)) {
-deathValue = deathParsed;
-}
- 
-if (!isNaN(consumableParsed)) {
-consumableValue = consumableParsed;
-}
- 
-saveLocal();
-updateDisplay();
- 
-document.getElementById("deathInput").value = "";
-document.getElementById("consumableInput").value = "";
- 
-alert("Settings updated.");
+    let deathParsed = parseInput(
+        document.getElementById("deathInput").value
+    );
+    let consumableParsed = parseInput(
+        document.getElementById("consumableInput").value
+    );
+    
+    saveState();
+    
+    if (!isNaN(deathParsed)) {
+        deathValue = deathParsed;
+    }
+    if (!isNaN(consumableParsed)) {
+        consumableValue = consumableParsed;
+    }
+    
+    saveLocal();
+    updateDisplay();
+    
+    document.getElementById("deathInput").value = "";
+    document.getElementById("consumableInput").value = "";
+    
+    alert("Settings updated.");
 };
 
 /* --- History --- */
 function loadHistory() {
     document.getElementById("historyTable").innerHTML = "";
-
     let keys = Object.keys(localStorage).filter(k => {
         return /^kdr-\d{4}-\d{2}-\d{2}$/.test(k);
     });
-
     keys.sort();
-
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
         return `
@@ -404,7 +358,6 @@ function loadHistory() {
             </tr>
         `;
     }).join("");
-
     document.getElementById("historyTable").innerHTML = `
         <table>
             <tr>
@@ -423,51 +376,39 @@ function loadHistory() {
 document.getElementById("exportCSV").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-
     let csv = "Date;Total;Kills;Deaths;StaffLosses\n";
-
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
-
         try {
             d = JSON.parse(raw);
         } catch {
             return;
         }
-
         csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}\n`;
     });
-
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = "kdr_history.csv";
     a.click();
-
     URL.revokeObjectURL(url);
 };
-
 
 /* --- Export Excel (REAL XLSX) --- */
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-
     const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses"]];
-
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
-
         try {
             d = JSON.parse(raw);
         } catch {
             return;
         }
-
         rows.push([
             k.replace("kdr-", ""),
             d.total ?? 0,
@@ -476,33 +417,11 @@ document.getElementById("exportExcel").onclick = () => {
             d.staffLossCount ?? 0
         ]);
     });
-
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "KDR History");
-
     XLSX.writeFile(workbook, "kdr_history.xlsx");
-
 };
-
-
-function safeParseKDR(key) {
-    try {
-        const value = localStorage.getItem(key);
-        const parsed = JSON.parse(value);
-
-        if (typeof parsed !== "object" || parsed === null) return null;
-
-        return {
-            total: parsed.total ?? 0,
-            kills: parsed.kills ?? 0,
-            deaths: parsed.deaths ?? 0,
-            staffLossCount: parsed.staffLossCount ?? 0
-        };
-    } catch {
-        return null;
-    }
-}
 
 updateDisplay();
 </script>
