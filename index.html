@@ -304,17 +304,18 @@ updateDisplay();
 
 /* --- Reset (Inside Settings Panel) --- */
 document.getElementById("resetBtn").onclick = () => {
-    if (!confirm("Are you sure you want to clear all of today's data?")) {
-        return;
-    }
-    saveState();
-    total = 0;
-    kills = 0;
-    deaths = 0;
-    staffLossCount = 0;
-    saveLocal();
-    updateDisplay();
-    alert("Today's data has been reset.");
+if (!confirm("Are you sure you want to clear all of today's data?")) {
+return;
+}
+ 
+saveState();
+total = 0;
+kills = 0;
+deaths = 0;
+staffLossCount = 0;
+ 
+saveLocal();
+updateDisplay();
 };
 
 /* --- Panels --- */
