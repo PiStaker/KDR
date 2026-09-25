@@ -22,6 +22,14 @@ h1 {
     text-shadow: 2px 2px #000;
 }
 
+<audio id="failSound" src="https://pistaker.github.io/KDR/fail.mp3" preload="auto"></audio>
+
+
+// Helper function to play any sound reliably
+function playSFX(audio) {
+    audio.currentTime = 0; // Rewind for instant replay
+    audio.play();
+}
 
 /* Base button and input layout */
 button, input {
@@ -121,11 +129,14 @@ th {
     <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
     <span> Death </span>
 </button>
+
+
 <!-- Staff Loss -->
 <button id="staffBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
     <span>Staff Loss</span>
 </button>
+
 <!-- Consumables -->
 <button id="ConsumableBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
@@ -155,8 +166,8 @@ th {
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
-    <input id="deathInput" placeholder="Death value (Amount to Loose)">
-    <input id="consumableInput" placeholder="Consumables value (Consumables Cost)">
+    <input id="deathInput" placeholder="Death value">
+    <input id="consumableInput" placeholder="Consumables value">
     <br><br>
     <button id="saveSettingsBtn">Save Values</button>
     <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
@@ -209,6 +220,7 @@ function saveState() {
         kills,
         deaths,
         staffLossCount,
+	consumableCount,
         deathValue,
         consumableValue
     });
@@ -260,7 +272,17 @@ document.getElementById("deathBtn").onclick = () => {
     deaths++;
     saveLocal();
     updateDisplay();
+
+    // Play sound from HTML element
+    const sound = document.getElementById("failSound");
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(error => {
+            console.error("Audio playback failed:", error);
+        });
+    }
 };
+
 
 /* --- Staff Loss --- */
 document.getElementById("staffBtn").onclick = () => {
@@ -282,6 +304,8 @@ saveLocal();
 updateDisplay();
 };
     
+
+
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
     if (historyStack.length === 0) {
@@ -303,16 +327,20 @@ updateDisplay();
 
 /* --- Reset (Inside Settings Panel) --- */
 document.getElementById("resetBtn").onclick = () => {
-    if (!confirm("Are you sure you want to clear all of today's data?")) {
-        return;
-    }
-    saveState();
-    total = 0;
-    kills = 0;
-    deaths = 0;
-    staffLossCount = 0;
-    saveLocal();
-    updateDisplay();
+if (!confirm("Are you sure you want to clear all of today's data?")) {
+return;
+}
+ 
+saveState();
+ 
+total = 0;
+kills = 0;
+deaths = 0;
+staffLossCount = 0;
+consumableCount = 0;
+ 
+saveLocal();
+updateDisplay();
     alert("Today's data has been reset.");
 };
 
@@ -368,24 +396,26 @@ function loadHistory() {
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
         return `
-            <tr>
-                <td>${k.replace("kdr-", "")}</td>
-                <td>${(d.total ?? 0).toLocaleString()}</td>
-                <td>${d.kills ?? 0}</td>
-                <td>${d.deaths ?? 0}</td>
-                <td>${d.staffLossCount ?? 0}</td>
-            </tr>
+<tr>
+<td>${k.replace("kdr-", "")}</td>
+<td>${(d.total ?? 0).toLocaleString()}</td>
+<td>${d.kills ?? 0}</td>
+<td>${d.deaths ?? 0}</td>
+<td>${d.staffLossCount ?? 0}</td>
+<td>${d.consumableCount ?? 0}</td>
+</tr>
         `;
     }).join("");
     document.getElementById("historyTable").innerHTML = `
         <table>
-            <tr>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Kills</th>
-                <th>Deaths</th>
-                <th>Staff Losses</th>
-            </tr>
+<tr>
+<th>Date</th>
+<th>Total</th>
+<th>Kills</th>
+<th>Deaths</th>
+<th>Staff Losses</th>
+<th>Consumables</th>
+</tr>
             ${rows}
         </table>
     `;
@@ -395,7 +425,7 @@ function loadHistory() {
 document.getElementById("exportCSV").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    let csv = "Date;Total;Kills;Deaths;StaffLosses\n";
+	let csv = "Date,Total,Kills,Deaths,StaffLosses,Consumables\n";
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
@@ -404,7 +434,7 @@ document.getElementById("exportCSV").onclick = () => {
         } catch {
             return;
         }
-        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}\n`;
+        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}${d.consumableCount ?? 0}\n`;
     });
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -419,7 +449,7 @@ document.getElementById("exportCSV").onclick = () => {
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses"]];
+    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses", "Consumables"]];
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
@@ -433,7 +463,8 @@ document.getElementById("exportExcel").onclick = () => {
             d.total ?? 0,
             d.kills ?? 0,
             d.deaths ?? 0,
-            d.staffLossCount ?? 0
+            d.staffLossCount ?? 0,
+	    d.consumableCount ?? 0
         ]);
     });
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
