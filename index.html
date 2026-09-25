@@ -126,6 +126,7 @@ th {
     <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
     <span>Staff Loss</span>
 </button>
+
 <!-- Consumables -->
 <button id="ConsumableBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
@@ -283,6 +284,8 @@ saveLocal();
 updateDisplay();
 };
     
+
+
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
     if (historyStack.length === 0) {
@@ -309,13 +312,16 @@ return;
 }
  
 saveState();
+ 
 total = 0;
 kills = 0;
 deaths = 0;
 staffLossCount = 0;
+consumableCount = 0;
  
 saveLocal();
 updateDisplay();
+    alert("Today's data has been reset.");
 };
 
 /* --- Panels --- */
@@ -370,24 +376,26 @@ function loadHistory() {
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
         return `
-            <tr>
-                <td>${k.replace("kdr-", "")}</td>
-                <td>${(d.total ?? 0).toLocaleString()}</td>
-                <td>${d.kills ?? 0}</td>
-                <td>${d.deaths ?? 0}</td>
-                <td>${d.staffLossCount ?? 0}</td>
-            </tr>
+<tr>
+<td>${k.replace("kdr-", "")}</td>
+<td>${(d.total ?? 0).toLocaleString()}</td>
+<td>${d.kills ?? 0}</td>
+<td>${d.deaths ?? 0}</td>
+<td>${d.staffLossCount ?? 0}</td>
+<td>${d.consumableCount ?? 0}</td>
+</tr>
         `;
     }).join("");
     document.getElementById("historyTable").innerHTML = `
         <table>
-            <tr>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Kills</th>
-                <th>Deaths</th>
-                <th>Staff Losses</th>
-            </tr>
+<tr>
+<th>Date</th>
+<th>Total</th>
+<th>Kills</th>
+<th>Deaths</th>
+<th>Staff Losses</th>
+<th>Consumables</th>
+</tr>
             ${rows}
         </table>
     `;
@@ -397,7 +405,7 @@ function loadHistory() {
 document.getElementById("exportCSV").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    let csv = "Date;Total;Kills;Deaths;StaffLosses\n";
+	let csv = "Date,Total,Kills,Deaths,StaffLosses,Consumables\n";
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
@@ -406,7 +414,7 @@ document.getElementById("exportCSV").onclick = () => {
         } catch {
             return;
         }
-        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}\n`;
+        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}${d.consumableCount ?? 0}\n`;
     });
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -421,7 +429,7 @@ document.getElementById("exportCSV").onclick = () => {
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses"]];
+    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses", "Consumables"]];
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
@@ -435,7 +443,8 @@ document.getElementById("exportExcel").onclick = () => {
             d.total ?? 0,
             d.kills ?? 0,
             d.deaths ?? 0,
-            d.staffLossCount ?? 0
+            d.staffLossCount ?? 0,
+	    d.consumableCount ?? 0
         ]);
     });
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
