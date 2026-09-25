@@ -16,6 +16,12 @@ text-align: center;
 padding-top: 20px;
 min-height: 100vh;
 }
+h1 {
+    font-size: 36px;
+    color: #f5e6c8;
+    text-shadow: 2px 2px #000;
+}
+
 
 /* Base button and input layout */
 button, input {
@@ -144,6 +150,7 @@ th {
     <button id="historyBtn">History</button>
 </div>
 <div id="staffLog"></div>
+<div id="consumableLog"></div>
 
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
@@ -172,6 +179,7 @@ let total = saved.total ?? 0;
 let kills = saved.kills ?? 0;
 let deaths = saved.deaths ?? 0;
 let staffLossCount = saved.staffLossCount ?? 0;
+let consumableCount = saved.consumableCount ?? 0;
 let deathValue = saved.deathValue ?? 128000;
 let consumableValue = saved.consumableValue ?? 25000;
 let historyStack = [];
@@ -190,6 +198,8 @@ function updateDisplay() {
         "Death (-" + deathValue.toLocaleString() + ")";
     document.getElementById("consumableText").textContent =
         "Consumables (-" + consumableValue.toLocaleString() + ")";
+document.getElementById("consumableLog").innerHTML =
+"Consumables Burnt : " + consumableCount;
 }
 
 /* --- Helpers --- */
@@ -209,6 +219,7 @@ function saveLocal() {
         kills,
         deaths,
         staffLossCount,
+	consumableCount,
         deathValue,
         consumableValue
     }));
@@ -262,10 +273,13 @@ document.getElementById("staffBtn").onclick = () => {
 
 /* --- Consumable Consumption --- */
 document.getElementById("ConsumableBtn").onclick = () => {
-    saveState();
-    total -= consumableValue;
-    saveLocal();
-    updateDisplay();
+saveState();
+ 
+total -= consumableValue;
+consumableCount++;
+ 
+saveLocal();
+updateDisplay();
 };
     
 /* --- Undo --- */
@@ -274,15 +288,18 @@ document.getElementById("undoBtn").onclick = () => {
         alert("Nothing to undo.");
         return;
     }
-    let prev = historyStack.pop();
-    total = prev.total;
-    kills = prev.kills;
-    deaths = prev.deaths;
-    staffLossCount = prev.staffLossCount;
-    deathValue = prev.deathValue;
-    saveLocal();
-    updateDisplay();
-};
+let prev = historyStack.pop();
+total = prev.total;
+kills = prev.kills;
+deaths = prev.deaths;
+staffLossCount = prev.staffLossCount;
+consumableCount = prev.consumableCount ?? 0;
+deathValue = prev.deathValue;
+consumableValue = prev.consumableValue ?? 25000;
+ 
+saveLocal();
+updateDisplay();
+}
 
 /* --- Reset (Inside Settings Panel) --- */
 document.getElementById("resetBtn").onclick = () => {
