@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<head>
+<title>OSRS KDR Tracker</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background-image: url("https://oldschool.runescape.wiki/images/Login_background_%28Halloween%29.png?f5662");
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+background-attachment: fixed;
+color: #f5e6c8;
+text-align: center;
+padding-top: 20px;
+min-height: 100vh;
+}
+h1 {
+    font-size: 36px;
+    color: #f5e6c8;
+    text-shadow: 2px 2px #000;
+}
+
+
+/* Base button and input layout */
+button, input {
+    font-size: 18px;
+    height: 48px;
+    padding: 0 16px;
+    margin: 6px;
+    border: 2px solid #c9a441;
+    border-radius: 6px;
+    background: #3a2f1b;
+    color: #f5e6c8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+button:hover {
+    background: #4a3b22;
+}
+input {
+    background: #2b2416;
+}
+img.icon {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+}
+
+/* Button Colors */
+#deathBtn { background: #5b1f1f; }
+#staffBtn { background: #3b245b; }
+#settingsBtn { background: #166f5b; }
+#ConsumableBtn { background: #3366cc; }
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+#stats {
+    font-size: 24px;
+    margin-top: 20px;
+    line-height: 1.6;
+    background: rgba(0,0,0,0.6);
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid #c9a441;
+}
+#staffLog {
+    margin-top: 15px;
+    font-size: 20px;
+}
+#killInput, #deathInput, #consumableInput {
+    width: 220px;
+    text-align: center;
+}
+.panel {
+    display: none;
+    margin-top: 20px;
+    padding: 15px;
+    background: #2b2416;
+    border-radius: 10px;
+    border: 2px solid #c9a441;
+    width: 90%;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    background: #3a2f1b;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #2b2416;
+}
+th {
+    background: #4a3b22;
+}
+</style>
+</head>
+<body>
+<h1>OSRS KDR Tracker</h1>
+<div id="stats"></div>
+<br>
+<!-- Death -->
+<button id="deathBtn">
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
+    <span> Death </span>
+</button>
+<!-- Staff Loss -->
+<button id="staffBtn">
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
+    <span>Staff Loss</span>
+</button>
+<!-- Consumables -->
+<button id="ConsumableBtn">
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
+    <span id="consumableText">Consumables</span>
+</button>
+    
+<br>
+<!-- Kill input and button -->
+<input id="killInput" placeholder="Kill (Key Value)">
+<button id="killAddBtn">
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Strength_icon_%28detail%29.png?a4903" alt="Strength Icon">
+    <span id="killAddText">Add Kill</span>
+</button>
+
+<!-- Toolbar -->
+<div class="toolbar">
+    <button id="undoBtn">Undo</button>
+    <button id="settingsBtn">
+        <img class="icon" src="https://oldschool.runescape.wiki/images/Settings.png?99265">
+        <span>Settings</span>
+    </button>
+    <button id="historyBtn">History</button>
+</div>
+<div id="staffLog"></div>
+<div id="consumableLog"></div>
+
+<!-- SETTINGS PANEL -->
+<div class="panel" id="settingsPanel">
+    <h2>Settings</h2>
+    <input id="deathInput" placeholder="Death value (Amount to Loose)">
+    <input id="consumableInput" placeholder="Consumables value (Consumables Cost)">
+    <br><br>
+    <button id="saveSettingsBtn">Save Values</button>
+    <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="panel" id="historyPanel">
+    <h2>History</h2>
+    <div id="historyTable"></div>
+    <br>
+    <button id="exportCSV">Export CSV</button>
+    <button id="exportExcel">Export Excel</button>
+</div>
+
+<script>
+/* --- Local State --- */
+const todayKey = "kdr-" + new Date().toISOString().slice(0, 10);
+let saved = JSON.parse(localStorage.getItem(todayKey)) || {};
+let total = saved.total ?? 0;
+let kills = saved.kills ?? 0;
+let deaths = saved.deaths ?? 0;
+let staffLossCount = saved.staffLossCount ?? 0;
+let consumableCount = saved.consumableCount ?? 0;
+let deathValue = saved.deathValue ?? 128000;
+let consumableValue = saved.consumableValue ?? 25000;
+let historyStack = [];
+
+/* --- UI Update --- */
+function updateDisplay() {
+    let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
+    document.getElementById("stats").innerHTML =
+        "Total: " + total.toLocaleString() + "<br>" +
+        "Kills: " + kills + "<br>" +
+        "Deaths: " + deaths + "<br>" +
+        "K/D Ratio: " + kd;
+    document.getElementById("staffLog").innerHTML =
+        "<strong>Staff Losses:</strong> " + staffLossCount;
+    document.querySelector("#deathBtn span").textContent =
+        "Death (-" + deathValue.toLocaleString() + ")";
+    document.getElementById("consumableText").textContent =
+        "Consumables (-" + consumableValue.toLocaleString() + ")";
+document.getElementById("consumableLog").innerHTML =
+"Consumables Burnt : " + consumableCount;
+}
+
+/* --- Helpers --- */
+function saveState() {
+    historyStack.push({
+        total,
+        kills,
+        deaths,
+        staffLossCount,
+        deathValue,
+        consumableValue
+    });
+}
+function saveLocal() {
+    localStorage.setItem(todayKey, JSON.stringify({
+        total,
+        kills,
+        deaths,
+        staffLossCount,
+	consumableCount,
+        deathValue,
+        consumableValue
+    }));
+}
+function parseInput(input) {
+    input = input.trim().toLowerCase();
+    if (input.endsWith("m")) return parseFloat(input.slice(0, -1)) * 1000000;
+    if (input.endsWith("k")) return parseFloat(input.slice(0, -1)) * 1000;
+    let num = parseFloat(input);
+    if (!isNaN(num)) return num * 1000;
+    return NaN;
+}
+
+/* --- Kill Add --- */
+function addKill() {
+    let raw = document.getElementById("killInput").value;
+    let parsed = parseInput(raw);
+    if (!isNaN(parsed)) {
+        saveState();
+        total += parsed;
+        kills++;
+        saveLocal();
+        updateDisplay();
+        document.getElementById("killInput").value = "";
+    } else {
+        alert("Enter a valid number.");
+    }
+}
+document.getElementById("killAddBtn").onclick = addKill;
+document.getElementById("killInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addKill();
+});
+
+/* --- Death --- */
+document.getElementById("deathBtn").onclick = () => {
+    saveState();
+    total -= deathValue;
+    deaths++;
+    saveLocal();
+    updateDisplay();
+};
+
+/* --- Staff Loss --- */
+document.getElementById("staffBtn").onclick = () => {
+    saveState();
+    total -= 60000;
+    staffLossCount++;
+    saveLocal();
+    updateDisplay();
+};
+
+/* --- Consumable Consumption --- */
+document.getElementById("ConsumableBtn").onclick = () => {
+saveState();
+ 
+total -= consumableValue;
+consumableCount++;
+ 
+saveLocal();
+updateDisplay();
+};
+    
+/* --- Undo --- */
+document.getElementById("undoBtn").onclick = () => {
+    if (historyStack.length === 0) {
+        alert("Nothing to undo.");
+        return;
+    }
+let prev = historyStack.pop();
+total = prev.total;
+kills = prev.kills;
+deaths = prev.deaths;
+staffLossCount = prev.staffLossCount;
+consumableCount = prev.consumableCount ?? 0;
+deathValue = prev.deathValue;
+consumableValue = prev.consumableValue ?? 25000;
+ 
+saveLocal();
+updateDisplay();
+}
+
+/* --- Reset (Inside Settings Panel) --- */
+document.getElementById("resetBtn").onclick = () => {
+    if (!confirm("Are you sure you want to clear all of today's data?")) {
+        return;
+    }
+    saveState();
+    total = 0;
+    kills = 0;
+    deaths = 0;
+    staffLossCount = 0;
+    saveLocal();
+    updateDisplay();
+    alert("Today's data has been reset.");
+};
+
+/* --- Panels --- */
+function togglePanel(id) {
+    const panel = document.getElementById(id);
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+document.getElementById("settingsBtn").onclick = () => togglePanel("settingsPanel");
+document.getElementById("historyBtn").onclick = () => {
+    const panel = document.getElementById("historyPanel");
+    panel.style.display =
+        (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
+    if (panel.style.display === "block") {
+        loadHistory();
+    }
+};
+
+/* --- Settings --- */
+document.getElementById("saveSettingsBtn").onclick = () => {
+    let deathParsed = parseInput(
+        document.getElementById("deathInput").value
+    );
+    let consumableParsed = parseInput(
+        document.getElementById("consumableInput").value
+    );
+    
+    saveState();
+    
+    if (!isNaN(deathParsed)) {
+        deathValue = deathParsed;
+    }
+    if (!isNaN(consumableParsed)) {
+        consumableValue = consumableParsed;
+    }
+    
+    saveLocal();
+    updateDisplay();
+    
+    document.getElementById("deathInput").value = "";
+    document.getElementById("consumableInput").value = "";
+    
+    alert("Settings updated.");
+};
+
+/* --- History --- */
+function loadHistory() {
+    document.getElementById("historyTable").innerHTML = "";
+    let keys = Object.keys(localStorage).filter(k => {
+        return /^kdr-\d{4}-\d{2}-\d{2}$/.test(k);
+    });
+    keys.sort();
+    let rows = keys.map(k => {
+        let d = JSON.parse(localStorage.getItem(k));
+        return `
+            <tr>
+                <td>${k.replace("kdr-", "")}</td>
+                <td>${(d.total ?? 0).toLocaleString()}</td>
+                <td>${d.kills ?? 0}</td>
+                <td>${d.deaths ?? 0}</td>
+                <td>${d.staffLossCount ?? 0}</td>
+            </tr>
+        `;
+    }).join("");
+    document.getElementById("historyTable").innerHTML = `
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Kills</th>
+                <th>Deaths</th>
+                <th>Staff Losses</th>
+            </tr>
+            ${rows}
+        </table>
+    `;
+}
+
+/* --- Export CSV --- */
+document.getElementById("exportCSV").onclick = () => {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
+    keys.sort();
+    let csv = "Date;Total;Kills;Deaths;StaffLosses\n";
+    keys.forEach(k => {
+        const raw = localStorage.getItem(k);
+        let d;
+        try {
+            d = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0}\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kdr_history.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+/* --- Export Excel (REAL XLSX) --- */
+document.getElementById("exportExcel").onclick = () => {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
+    keys.sort();
+    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses"]];
+    keys.forEach(k => {
+        const raw = localStorage.getItem(k);
+        let d;
+        try {
+            d = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        rows.push([
+            k.replace("kdr-", ""),
+            d.total ?? 0,
+            d.kills ?? 0,
+            d.deaths ?? 0,
+            d.staffLossCount ?? 0
+        ]);
+    });
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "KDR History");
+    XLSX.writeFile(workbook, "kdr_history.xlsx");
+};
+
+updateDisplay();
+</script>
+</body>
+</html>
