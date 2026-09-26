@@ -257,6 +257,8 @@ function addKill() {
         saveState();
         total += parsed;
         kills++;
+            // Play fail sound
+    playSFX("killSound");
         saveLocal();
         updateDisplay();
         document.getElementById("killInput").value = "";
@@ -268,8 +270,7 @@ document.getElementById("killAddBtn").onclick = addKill;
 
 document.getElementById("killInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addKill();
-    // Play fail sound
-    playSFX("killSound");
+
 });
 
 /* --- Death --- */
