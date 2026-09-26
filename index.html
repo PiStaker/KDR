@@ -118,6 +118,7 @@ th {
 <audio id="killSound" src="https://pistaker.github.io/KDR/Kill.mp3" preload="auto"></audio>
 <audio id="EatSound" src="https://pistaker.github.io/KDR/Eat.mp3" preload="auto"></audio>
 <audio id="CrySound" src="https://pistaker.github.io/KDR/Cry.mp3" preload="auto"></audio>
+<audio id="UndoSound" src="https://pistaker.github.io/KDR/Undo.mp3" preload="auto"></audio>
 
 <h1>OSRS KDR Tracker</h1>
 <div id="stats"></div>
@@ -325,6 +326,8 @@ document.getElementById("undoBtn").onclick = () => {
     consumableValue = prev.consumableValue ?? 25000;
     
     saveLocal();
+    // Play Eat sound
+    playSFX("UndoSound");
     updateDisplay();
 };
 
