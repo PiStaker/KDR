@@ -116,6 +116,8 @@ th {
 <!-- Audio Element -->
 <audio id="failSound" src="https://pistaker.github.io/KDR/fail.mp3" preload="auto"></audio>
 <audio id="killSound" src="https://pistaker.github.io/KDR/Kill.mp3" preload="auto"></audio>
+<audio id="EatSound" src="https://pistaker.github.io/KDR/Eat.mp3" preload="auto"></audio>
+<audio id="CrySound" src="https://pistaker.github.io/KDR/Cry.mp3" preload="auto"></audio>
 
 <h1>OSRS KDR Tracker</h1>
 <div id="stats"></div>
@@ -257,7 +259,7 @@ function addKill() {
         saveState();
         total += parsed;
         kills++;
-            // Play fail sound
+    // Play fail sound
     playSFX("killSound");
         saveLocal();
         updateDisplay();
@@ -292,6 +294,8 @@ document.getElementById("staffBtn").onclick = () => {
     staffLossCount++;
     saveLocal();
     updateDisplay();
+    // Play fail sound
+    playSFX("CrySound");
 };
 
 /* --- Consumable Consumption --- */
@@ -300,6 +304,8 @@ document.getElementById("ConsumableBtn").onclick = () => {
     total -= consumableValue;
     consumableCount++;
     saveLocal();
+    // Play Eat sound
+    playSFX("EatSound");
     updateDisplay();
 };
 
