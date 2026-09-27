@@ -54,7 +54,7 @@ img.icon {
 
 /* Button Colors */
 #deathBtn { background: #5b1f1f; }
-#staffBtn { background: #3b245b; }
+#itemBtn { background: #3b245b; }
 #settingsBtn { background: #166f5b; }
 #ConsumableBtn { background: #3366cc; }
 
@@ -76,11 +76,11 @@ img.icon {
     border-radius: 10px;
     border: 2px solid #c9a441;
 }
-#staffLog {
+#itemLog {
     margin-top: 15px;
     font-size: 20px;
 }
-#killInput, #deathInput, #consumableInput {
+#killInput, #deathInput, #consumableInput, #itemInput {
     width: 220px;
     text-align: center;
 }
@@ -129,10 +129,10 @@ th {
     <span> Death </span>
 </button>
 
-<!-- Staff Loss -->
-<button id="staffBtn">
-    <img class="icon" src="https://oldschool.runescape.wiki/images/Ancient_staff.png">
-    <span>Staff Loss</span>
+<!-- Item Loss -->
+<button id="itemBtn">
+    <img class="icon" src="https://oldschool.runescape.wiki/images/Items_kept_on_death.png?dd21d">
+    <span id="itemValue">Item Loss</span>
 </button>
 
 <!-- Consumables -->
@@ -158,14 +158,16 @@ th {
     </button>
     <button id="historyBtn">History</button>
 </div>
-<div id="staffLog"></div>
+<div id="itemLog"></div>
 <div id="consumableLog"></div>
+
 
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
     <input id="deathInput" placeholder="Death value">
     <input id="consumableInput" placeholder="Consumables value">
+    <input id="itemInput" placeholder="Item Loss value">
     <br><br>
     <button id="saveSettingsBtn">Save Values</button>
     <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
@@ -187,10 +189,11 @@ let saved = JSON.parse(localStorage.getItem(todayKey)) || {};
 let total = saved.total ?? 0;
 let kills = saved.kills ?? 0;
 let deaths = saved.deaths ?? 0;
-let staffLossCount = saved.staffLossCount ?? 0;
+let itemLossCount = saved.itemLossCount ?? 0;
 let consumableCount = saved.consumableCount ?? 0;
 let deathValue = saved.deathValue ?? 128000;
 let consumableValue = saved.consumableValue ?? 25000;
+let itemValue = saved.itemValue ?? 96000; 
 let historyStack = [];
 
 /* --- Sound Handler --- */
@@ -210,10 +213,13 @@ function updateDisplay() {
         "Kills: " + kills + "<br>" +
         "Deaths: " + deaths + "<br>" +
         "K/D Ratio: " + kd;
-    document.getElementById("staffLog").innerHTML =
-        "<strong>Staff Losses:</strong> " + staffLossCount;
+    document.getElementById("itemLog").innerHTML =
+        "<strong>Item Losses:</strong> " + itemLossCount;
     document.querySelector("#deathBtn span").textContent =
         "Death (-" + deathValue.toLocaleString() + ")";
+    document.getElementById("itemValue").textContent =
+        "Item Loss (-" + itemValue.toLocaleString() + ")";
+
     document.getElementById("consumableText").textContent =
         "Consumables (-" + consumableValue.toLocaleString() + ")";
     document.getElementById("consumableLog").innerHTML =
@@ -226,7 +232,8 @@ function saveState() {
         total,
         kills,
         deaths,
-        staffLossCount,
+        itemLossCount,
+	itemValue,
         consumableCount,
         deathValue,
         consumableValue
@@ -237,7 +244,8 @@ function saveLocal() {
         total,
         kills,
         deaths,
-        staffLossCount,
+        itemLossCount,
+	itemValue,
         consumableCount,
         deathValue,
         consumableValue
@@ -288,11 +296,11 @@ document.getElementById("deathBtn").onclick = () => {
     playSFX("failSound");
 };
 
-/* --- Staff Loss --- */
-document.getElementById("staffBtn").onclick = () => {
+/* --- Item Loss --- */
+document.getElementById("itemBtn").onclick = () => {
     saveState();
-    total -= 60000;
-    staffLossCount++;
+    total -= itemValue;
+    itemLossCount++;
     saveLocal();
     updateDisplay();
     // Play fail sound
@@ -320,10 +328,11 @@ document.getElementById("undoBtn").onclick = () => {
     total = prev.total;
     kills = prev.kills;
     deaths = prev.deaths;
-    staffLossCount = prev.staffLossCount;
+    itemLossCount = prev.itemLossCount;
     consumableCount = prev.consumableCount ?? 0;
     deathValue = prev.deathValue;
     consumableValue = prev.consumableValue ?? 25000;
+    itemValue = prev.itemValue ?? 96000;
     
     saveLocal();
     // Play Eat sound
@@ -340,7 +349,7 @@ document.getElementById("resetBtn").onclick = () => {
     total = 0;
     kills = 0;
     deaths = 0;
-    staffLossCount = 0;
+    itemLossCount = 0;
     consumableCount = 0;
     saveLocal();
     updateDisplay();
@@ -366,18 +375,21 @@ document.getElementById("historyBtn").onclick = () => {
 document.getElementById("saveSettingsBtn").onclick = () => {
     let deathParsed = parseInput(document.getElementById("deathInput").value);
     let consumableParsed = parseInput(document.getElementById("consumableInput").value);
+    let itemParsed = parseInput(document.getElementById("itemInput").value);
     
     saveState();
     
     if (!isNaN(deathParsed)) deathValue = deathParsed;
     if (!isNaN(consumableParsed)) consumableValue = consumableParsed;
+    if (!isNaN(itemParsed)) itemValue = itemParsed;
     
     saveLocal();
     updateDisplay();
     
     document.getElementById("deathInput").value = "";
     document.getElementById("consumableInput").value = "";
-    
+    document.getElementById("itemInput").value = "";
+   
     alert("Settings updated.");
 };
 
@@ -386,30 +398,69 @@ function loadHistory() {
     document.getElementById("historyTable").innerHTML = "";
     let keys = Object.keys(localStorage).filter(k => /^kdr-\d{4}-\d{2}-\d{2}$/.test(k));
     keys.sort();
+
+    // Accumulators for running totals
+    let sumTotal = 0;
+    let sumKills = 0;
+    let sumDeaths = 0;
+    let sumItemLosses = 0;
+    let sumConsumables = 0;
+
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
+
+        // Get values (defaulting to 0 if missing)
+        let rowTotal = d.total ?? 0;
+        let rowKills = d.kills ?? 0;
+        let rowDeaths = d.deaths ?? 0;
+        let rowItems = d.itemLossCount ?? 0;
+        let rowConsumables = d.consumableCount ?? 0;
+
+        // Add to running totals
+        sumTotal += rowTotal;
+        sumKills += rowKills;
+        sumDeaths += rowDeaths;
+        sumItemLosses += rowItems;
+        sumConsumables += rowConsumables;
+
         return `
             <tr>
-            <td>${k.replace("kdr-", "")}</td>
-            <td>${(d.total ?? 0).toLocaleString()}</td>
-            <td>${d.kills ?? 0}</td>
-            <td>${d.deaths ?? 0}</td>
-            <td>${d.staffLossCount ?? 0}</td>
-            <td>${d.consumableCount ?? 0}</td>
+                <td>${k.replace("kdr-", "")}</td>
+                <td>${rowTotal.toLocaleString()}</td>
+                <td>${rowKills}</td>
+                <td>${rowDeaths}</td>
+                <td>${rowItems}</td>
+                <td>${rowConsumables}</td>
             </tr>
         `;
     }).join("");
+
+    // Build the table with a <tfoot> running total row at the bottom
     document.getElementById("historyTable").innerHTML = `
         <table>
-            <tr>
-            <th>Date</th>
-            <th>Total</th>
-            <th>Kills</th>
-            <th>Deaths</th>
-            <th>Staff Losses</th>
-            <th>Consumables</th>
-            </tr>
-            ${rows}
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Kills</th>
+                    <th>Deaths</th>
+                    <th>Item Losses</th>
+                    <th>Consumables</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; background: #2b2416; border-top: 2px solid #c9a441;">
+                    <td>All Time Total</td>
+                    <td>${sumTotal.toLocaleString()}gp</td>
+                    <td>${sumKills}</td>
+                    <td>${sumDeaths}</td>
+                    <td>${sumItemLosses}</td>
+                    <td>${sumConsumables}</td>
+                </tr>
+            </tfoot>
         </table>
     `;
 }
@@ -418,12 +469,12 @@ function loadHistory() {
 document.getElementById("exportCSV").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    let csv = "Date,Total,Kills,Deaths,StaffLosses,Consumables\n";
+    let csv = "Date,Total,Kills,Deaths,ItemLosses,Consumables\n";
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
         try { d = JSON.parse(raw); } catch { return; }
-        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.staffLossCount ?? 0};${d.consumableCount ?? 0}\n`;
+        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.itemLossCount ?? 0};${d.consumableCount ?? 0}\n`;
     });
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -438,7 +489,7 @@ document.getElementById("exportCSV").onclick = () => {
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    const rows = [["Date", "Total", "Kills", "Deaths", "StaffLosses", "Consumables"]];
+    const rows = [["Date", "Total", "Kills", "Deaths", "Item Losses", "Consumables"]];
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
@@ -448,7 +499,7 @@ document.getElementById("exportExcel").onclick = () => {
             d.total ?? 0,
             d.kills ?? 0,
             d.deaths ?? 0,
-            d.staffLossCount ?? 0,
+            d.itemLossCount ?? 0,
             d.consumableCount ?? 0
         ]);
     });
