@@ -22,7 +22,6 @@ h1 {
     color: #f5e6c8;
     text-shadow: 2px 2px #000;
 }
-
 /* Base button and input layout */
 button, input {
     font-size: 18px;
@@ -52,13 +51,11 @@ img.icon {
     height: 24px;
     display: inline-block;
 }
-
 /* Button Colors */
 #deathBtn { background: #5b1f1f; }
 #itemBtn { background: #3b245b; }
 #settingsBtn { background: #166f5b; }
 #ConsumableBtn { background: #3366cc; }
-
 /* Toolbar */
 .toolbar {
     display: flex;
@@ -113,14 +110,12 @@ th {
 </style>
 </head>
 <body>
-
 <!-- Audio Element -->
 <audio id="failSound" src="https://pistaker.github.io/KDR/fail.mp3" preload="auto"></audio>
 <audio id="killSound" src="https://pistaker.github.io/KDR/Kill.mp3" preload="auto"></audio>
 <audio id="EatSound" src="https://pistaker.github.io/KDR/Eat.mp3" preload="auto"></audio>
 <audio id="CrySound" src="https://pistaker.github.io/KDR/Cry.mp3" preload="auto"></audio>
 <audio id="UndoSound" src="https://pistaker.github.io/KDR/Undo.mp3" preload="auto"></audio>
-
 <h1>OSRS KDR Tracker</h1>
 <div id="stats"></div>
 <br>
@@ -129,13 +124,11 @@ th {
     <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
     <span> Death </span>
 </button>
-
 <!-- Item Loss -->
 <button id="itemBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Items_kept_on_death.png?dd21d">
     <span id="itemValue">Item Loss</span>
 </button>
-
 <!-- Consumables -->
 <button id="ConsumableBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
@@ -149,7 +142,6 @@ th {
     <img class="icon" src="https://oldschool.runescape.wiki/images/Strength_icon_%28detail%29.png?a4903" alt="Strength Icon">
     <span id="killAddText">Add Kill</span>
 </button>
-
 <!-- Toolbar -->
 <div class="toolbar">
     <button id="undoBtn">Undo</button>
@@ -161,8 +153,6 @@ th {
 </div>
 <div id="itemLog"></div>
 <div id="consumableLog"></div>
-
-
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
@@ -173,7 +163,6 @@ th {
     <button id="saveSettingsBtn">Save Values</button>
     <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
 </div>
-
 <!-- HISTORY PANEL -->
 <div class="panel" id="historyPanel">
     <h2>History</h2>
@@ -182,7 +171,6 @@ th {
     <button id="exportCSV">Export CSV</button>
     <button id="exportExcel">Export Excel</button>
 </div>
-
 <script>
 /* --- Local State --- */
 const todayKey = "kdr-" + new Date().toISOString().slice(0, 10);
@@ -196,7 +184,6 @@ let deathValue = saved.deathValue ?? 128000;
 let consumableValue = saved.consumableValue ?? 25000;
 let itemValue = saved.itemValue ?? 96000; 
 let historyStack = [];
-
 /* --- Sound Handler --- */
 function playSFX(audioId) {
     const sound = document.getElementById(audioId);
@@ -205,7 +192,6 @@ function playSFX(audioId) {
         sound.play().catch(e => console.error("Audio playback error:", e));
     }
 }
-
 /* --- UI Update --- */
 function updateDisplay() {
     let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
@@ -220,13 +206,11 @@ function updateDisplay() {
         "Death (-" + deathValue.toLocaleString() + ")";
     document.getElementById("itemValue").textContent =
         "Item Loss (-" + itemValue.toLocaleString() + ")";
-
     document.getElementById("consumableText").textContent =
         "Consumables (-" + consumableValue.toLocaleString() + ")";
     document.getElementById("consumableLog").innerHTML =
         "Consumables Burnt : " + consumableCount;
 }
-
 /* --- Helpers --- */
 function saveState() {
     historyStack.push({
@@ -234,7 +218,7 @@ function saveState() {
         kills,
         deaths,
         itemLossCount,
-	itemValue,
+        itemValue,
         consumableCount,
         deathValue,
         consumableValue
@@ -246,7 +230,7 @@ function saveLocal() {
         kills,
         deaths,
         itemLossCount,
-	itemValue,
+        itemValue,
         consumableCount,
         deathValue,
         consumableValue
@@ -260,7 +244,6 @@ function parseInput(input) {
     if (!isNaN(num)) return num * 1000;
     return NaN;
 }
-
 /* --- Kill Add --- */
 function addKill() {
     let raw = document.getElementById("killInput").value;
@@ -269,8 +252,7 @@ function addKill() {
         saveState();
         total += parsed;
         kills++;
-    // Play fail sound
-    playSFX("killSound");
+        playSFX("killSound");
         saveLocal();
         updateDisplay();
         document.getElementById("killInput").value = "";
@@ -279,12 +261,9 @@ function addKill() {
     }
 }
 document.getElementById("killAddBtn").onclick = addKill;
-
 document.getElementById("killInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addKill();
-
 });
-
 /* --- Death --- */
 document.getElementById("deathBtn").onclick = () => {
     saveState();
@@ -292,11 +271,8 @@ document.getElementById("deathBtn").onclick = () => {
     deaths++;
     saveLocal();
     updateDisplay();
-
-    // Play fail sound
     playSFX("failSound");
 };
-
 /* --- Item Loss --- */
 document.getElementById("itemBtn").onclick = () => {
     saveState();
@@ -304,21 +280,17 @@ document.getElementById("itemBtn").onclick = () => {
     itemLossCount++;
     saveLocal();
     updateDisplay();
-    // Play fail sound
     playSFX("CrySound");
 };
-
 /* --- Consumable Consumption --- */
 document.getElementById("ConsumableBtn").onclick = () => {
     saveState();
     total -= consumableValue;
     consumableCount++;
     saveLocal();
-    // Play Eat sound
     playSFX("EatSound");
     updateDisplay();
 };
-
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
     if (historyStack.length === 0) {
@@ -336,11 +308,9 @@ document.getElementById("undoBtn").onclick = () => {
     itemValue = prev.itemValue ?? 96000;
     
     saveLocal();
-    // Play Eat sound
     playSFX("UndoSound");
     updateDisplay();
 };
-
 /* --- Reset (Inside Settings Panel) --- */
 document.getElementById("resetBtn").onclick = () => {
     if (!confirm("Are you sure you want to clear all of today's data?")) {
@@ -356,7 +326,6 @@ document.getElementById("resetBtn").onclick = () => {
     updateDisplay();
     alert("Today's data has been reset.");
 };
-
 /* --- Panels --- */
 function togglePanel(id) {
     const panel = document.getElementById(id);
@@ -371,7 +340,6 @@ document.getElementById("historyBtn").onclick = () => {
         loadHistory();
     }
 };
-
 /* --- Settings --- */
 document.getElementById("saveSettingsBtn").onclick = () => {
     let deathParsed = parseInput(document.getElementById("deathInput").value);
@@ -393,36 +361,38 @@ document.getElementById("saveSettingsBtn").onclick = () => {
    
     alert("Settings updated.");
 };
-
 /* --- History --- */
 function loadHistory() {
     document.getElementById("historyTable").innerHTML = "";
     let keys = Object.keys(localStorage).filter(k => /^kdr-\d{4}-\d{2}-\d{2}$/.test(k));
     keys.sort();
 
-    // Accumulators for running totals
     let sumTotal = 0;
     let sumKills = 0;
     let sumDeaths = 0;
     let sumItemLosses = 0;
+    let sumItemLossValue = 0;
     let sumConsumables = 0;
+    let sumConsumableValue = 0;
 
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
 
-        // Get values (defaulting to 0 if missing)
         let rowTotal = d.total ?? 0;
         let rowKills = d.kills ?? 0;
         let rowDeaths = d.deaths ?? 0;
         let rowItems = d.itemLossCount ?? 0;
+        let rowItemVal = rowItems * (d.itemValue ?? 96000);
         let rowConsumables = d.consumableCount ?? 0;
+        let rowConsumableVal = rowConsumables * (d.consumableValue ?? 25000);
 
-        // Add to running totals
         sumTotal += rowTotal;
         sumKills += rowKills;
         sumDeaths += rowDeaths;
         sumItemLosses += rowItems;
+        sumItemLossValue += rowItemVal;
         sumConsumables += rowConsumables;
+        sumConsumableValue += rowConsumableVal;
 
         return `
             <tr>
@@ -430,13 +400,12 @@ function loadHistory() {
                 <td>${rowTotal.toLocaleString()}</td>
                 <td>${rowKills}</td>
                 <td>${rowDeaths}</td>
-                <td>${rowItems}</td>
-                <td>${rowConsumables}</td>
+                <td>${rowItems} (-${rowItemVal.toLocaleString()} GP)</td>
+                <td>${rowConsumables} (-${rowConsumableVal.toLocaleString()} GP)</td>
             </tr>
         `;
     }).join("");
 
-    // Build the table with a <tfoot> running total row at the bottom
     document.getElementById("historyTable").innerHTML = `
         <table>
             <thead>
@@ -445,8 +414,8 @@ function loadHistory() {
                     <th>Total</th>
                     <th>Kills</th>
                     <th>Deaths</th>
-                    <th>Item Losses</th>
-                    <th>Consumables</th>
+                    <th>Item Losses (GP)</th>
+                    <th>Consumables (GP)</th>
                 </tr>
             </thead>
             <tbody>
@@ -455,17 +424,16 @@ function loadHistory() {
             <tfoot>
                 <tr style="font-weight: bold; background: #2b2416; border-top: 2px solid #c9a441;">
                     <td>All Time Total</td>
-                    <td>${sumTotal.toLocaleString()}gp</td>
+                    <td>${sumTotal.toLocaleString()} GP</td>
                     <td>${sumKills}</td>
                     <td>${sumDeaths}</td>
-                    <td>${sumItemLosses}</td>
-                    <td>${sumConsumables}</td>
+                    <td>${sumItemLosses} (-${sumItemLossValue.toLocaleString()} GP)</td>
+                    <td>${sumConsumables} (-${sumConsumableValue.toLocaleString()} GP)</td>
                 </tr>
             </tfoot>
         </table>
     `;
 }
-
 /* --- Export CSV --- */
 document.getElementById("exportCSV").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
@@ -485,31 +453,40 @@ document.getElementById("exportCSV").onclick = () => {
     a.click();
     URL.revokeObjectURL(url);
 };
-
 /* --- Export Excel (REAL XLSX) --- */
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
-    const rows = [["Date", "Total", "Kills", "Deaths", "Item Losses", "Consumables"]];
+    
+    const rows = [["Date", "Total GP", "Kills", "Deaths", "Item Losses", "Item Loss GP", "Consumables", "Consumables GP"]];
+    
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
         let d;
         try { d = JSON.parse(raw); } catch { return; }
+        
+        let itemQty = d.itemLossCount ?? 0;
+        let itemGP = itemQty * (d.itemValue ?? 96000);
+        let conQty = d.consumableCount ?? 0;
+        let conGP = conQty * (d.consumableValue ?? 25000);
+
         rows.push([
             k.replace("kdr-", ""),
             d.total ?? 0,
             d.kills ?? 0,
             d.deaths ?? 0,
-            d.itemLossCount ?? 0,
-            d.consumableCount ?? 0
+            itemQty,
+            -itemGP,
+            conQty,
+            -conGP
         ]);
     });
+    
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "KDR History");
     XLSX.writeFile(workbook, "kdr_history.xlsx");
 };
-
 updateDisplay();
 </script>
 </body>
