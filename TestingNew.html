@@ -107,6 +107,17 @@ th, td {
 th {
     background: #4a3b22;
 }
+
+.lossValue {
+color: #ff5a5a;
+font-weight: bold;
+}
+ 
+.profitValue {
+color: #66ff66;
+font-weight: bold;
+}
+
 </style>
 </head>
 <body>
@@ -201,6 +212,7 @@ let consumableValue = saved.consumableValue ?? 25000;
 let itemValue = saved.itemValue ?? 96000; 
 let highestKill = saved.highestKill ?? 0;
 let lowestKill = saved.lowestKill ?? null;
+let grossKillValue = saved.grossKillValue ?? 0;
 let historyStack = [];
 
 /* --- Sound Handler --- */
@@ -252,6 +264,7 @@ function saveState() {
         deathValue,
         consumableValue,
         highestKill,
+	grossKillValue,
         lowestKill
     });
 }
@@ -267,6 +280,7 @@ function saveLocal() {
         deathValue,
         consumableValue,
         highestKill,
+	grossKillValue,
         lowestKill
     }));
 }
@@ -285,8 +299,9 @@ function addKill() {
     let parsed = parseInput(raw);
     if (!isNaN(parsed)) {
         saveState();
-        total += parsed;
-        kills++;
+total += parsed;
+grossKillValue += parsed;
+kills++;
 
         if (parsed > highestKill) {
             highestKill = parsed;
@@ -296,6 +311,7 @@ function addKill() {
         }
 
         playSFX("killSound");
+
         saveLocal();
         updateDisplay();
         document.getElementById("killInput").value = "";
@@ -307,6 +323,9 @@ document.getElementById("killAddBtn").onclick = addKill;
 document.getElementById("killInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addKill();
 });
+grossKillValue,
+
+
 
 /* --- Death --- */
 document.getElementById("deathBtn").onclick = () => {
@@ -355,6 +374,7 @@ document.getElementById("undoBtn").onclick = () => {
     itemValue = prev.itemValue ?? 96000;
     highestKill = prev.highestKill ?? 0;
     lowestKill = prev.lowestKill ?? null;
+    grossKillValue = prev.grossKillValue;
     saveLocal();
     playSFX("UndoSound");
     updateDisplay();
@@ -373,10 +393,13 @@ document.getElementById("resetBtn").onclick = () => {
     consumableCount = 0;
     highestKill = 0;
     lowestKill = null;
+    grossKillValue = 0;
     saveLocal();
     updateDisplay();
     alert("Today's data has been reset.");
 };
+
+
 
 /* --- Visual Panel Toggles --- */
 function togglePanel(id) {
@@ -411,10 +434,6 @@ loadStatistics();
 
 
 
-
-
-
-
 /* --- Configuration Settings Save --- */
 document.getElementById("saveSettingsBtn").onclick = () => {
     let deathParsed = parseInput(document.getElementById("deathInput").value);
@@ -434,6 +453,8 @@ document.getElementById("saveSettingsBtn").onclick = () => {
     document.getElementById("itemInput").value = "";
     alert("Settings updated.");
 };
+
+
 
 /* --- Render History Data Table --- */
 function loadHistory() {
@@ -539,7 +560,7 @@ const d = JSON.parse(localStorage.getItem(k));
 totalKills += d.kills ?? 0;
 totalDeaths += d.deaths ?? 0;
  
-totalGpEarned += d.total ?? 0;
+totalGpEarned += d.grossKillValue ?? 0;
  
 totalDeathGp +=
 (d.deaths ?? 0) *
@@ -573,7 +594,15 @@ const overallKD =
 totalDeaths === 0
 ? totalKills
 : (totalKills / totalDeaths).toFixed(2);
- 
+
+const netProfit =
+totalGpEarned
+- totalDeathGp
+- totalItemLossGp
+- totalConsumableGp; 
+
+
+
 document.getElementById("statisticsContent").innerHTML = `
 <table>
 <tr>
@@ -585,47 +614,7 @@ document.getElementById("statisticsContent").innerHTML = `
 <td>Overall K/D</td>
 <td>${overallKD}</td>
 </tr>
- 
-<tr>
-<td>Total GP From Kills</td>
-<td>${totalGpEarned.toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Total GP Lost To Deaths</td>
-<td>${totalDeathGp.toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Total Item Loss Value</td>
-<td>${totalItemLossGp.toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Total Consumables Value</td>
-<td>${totalConsumableGp.toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Best Key Ever</td>
-<td>${bestKey.toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Worst Key Ever</td>
-<td>${(worstKey ?? 0).toLocaleString()} GP</td>
-</tr>
- 
-<tr>
-<td>Total Item Losses</td>
-<td>${totalItemLosses}</td>
-</tr>
- 
-<tr>
-<td>Total Consumables Used</td>
-<td>${totalConsumables}</td>
-</tr>
- 
+
 <tr>
 <td>Total Kills</td>
 <td>${totalKills}</td>
@@ -635,6 +624,55 @@ document.getElementById("statisticsContent").innerHTML = `
 <td>Total Deaths</td>
 <td>${totalDeaths}</td>
 </tr>
+
+<tr>
+<td>Total GP From Kills</td>
+<td><span class="profitValue">${totalGpEarned.toLocaleString()} GP</span></td>
+</tr>
+ 
+<tr>
+<td>Total GP Lost To Deaths</td>
+<td><span class="lossValue">-${totalDeathGp.toLocaleString()} GP</span></td>	
+</tr>
+ 
+<tr>
+<td>Total Item Losses</td>
+<td>${totalItemLosses}</td>
+</tr>
+
+<tr>
+<td>Total Item Loss Value</td>
+<td><span class="lossValue">-${totalItemLossGp.toLocaleString()} GP</span></td>
+</tr>
+
+<tr>
+<td>Total Consumables Used</td>
+<td>${totalConsumables}</td>
+</tr>
+
+<tr>
+<td>Total Consumables Value</td>
+<td><span class="lossValue">-${totalConsumableGp.toLocaleString()} GP</span></td>
+</tr>
+
+<tr>
+<td>Best Key</td>
+<td>${bestKey.toLocaleString()} GP</td>
+</tr>
+ 
+<tr>
+<td>Worst Key</td>
+<td>${(worstKey ?? 0).toLocaleString()} GP</td>
+</tr>
+
+
+<tr>
+<td>Net Profit</td>
+<td><span class="profitValue">
+${netProfit.toLocaleString()} GP
+</span></td>
+</tr>
+
 </table>
 `;
 }
