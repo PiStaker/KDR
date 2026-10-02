@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <head>
 <title>OSRS KDR Tracker</title>
-<link rel="icon" type="image/x-icon" href="https://pistaker.github.io/KDR/favicon.png">
+<link rel="icon" type="image/x-icon" href="https://github.io">
 <style>
 body {
 font-family: Arial, sans-serif;
@@ -90,7 +90,7 @@ img.icon {
     border-radius: 10px;
     border: 2px solid #c9a441;
     width: 90%;
-    max-width: 700px;
+    max-width: 850px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -110,39 +110,40 @@ th {
 </style>
 </head>
 <body>
-<!-- Audio Element -->
+<!-- Audio Elements -->
 <audio id="failSound" src="https://pistaker.github.io/KDR/fail.mp3" preload="auto"></audio>
 <audio id="killSound" src="https://pistaker.github.io/KDR/Kill.mp3" preload="auto"></audio>
 <audio id="EatSound" src="https://pistaker.github.io/KDR/Eat.mp3" preload="auto"></audio>
 <audio id="CrySound" src="https://pistaker.github.io/KDR/Cry.mp3" preload="auto"></audio>
 <audio id="UndoSound" src="https://pistaker.github.io/KDR/Undo.mp3" preload="auto"></audio>
+
 <h1>OSRS KDR Tracker</h1>
 <div id="stats"></div>
 <br>
-<!-- Death -->
+
+<!-- Main Controls -->
 <button id="deathBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Skull.png">
     <span> Death </span>
 </button>
-<!-- Item Loss -->
 <button id="itemBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Items_kept_on_death.png?dd21d">
     <span id="itemValue">Item Loss</span>
 </button>
-<!-- Consumables -->
 <button id="ConsumableBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Anglerfish_detail.png?ad2dd">
     <span id="consumableText">Consumables</span>
 </button>
     
 <br>
-<!-- Kill input and button -->
+<!-- Kill Input Grid -->
 <input id="killInput" placeholder="Kill (Key Value)">
 <button id="killAddBtn">
     <img class="icon" src="https://oldschool.runescape.wiki/images/Strength_icon_%28detail%29.png?a4903" alt="Strength Icon">
     <span id="killAddText">Add Kill</span>
 </button>
-<!-- Toolbar -->
+
+<!-- Navigation Toolbar -->
 <div class="toolbar">
     <button id="undoBtn">Undo</button>
     <button id="settingsBtn">
@@ -151,8 +152,10 @@ th {
     </button>
     <button id="historyBtn">History</button>
 </div>
+
 <div id="itemLog"></div>
 <div id="consumableLog"></div>
+
 <!-- SETTINGS PANEL -->
 <div class="panel" id="settingsPanel">
     <h2>Settings</h2>
@@ -163,14 +166,15 @@ th {
     <button id="saveSettingsBtn">Save Values</button>
     <button id="resetBtn" style="background: #5b1f1f;">Reset Today's Data</button>
 </div>
+
 <!-- HISTORY PANEL -->
 <div class="panel" id="historyPanel">
     <h2>History</h2>
     <div id="historyTable"></div>
     <br>
-    <button id="exportCSV">Export CSV</button>
     <button id="exportExcel">Export Excel</button>
 </div>
+
 <script>
 /* --- Local State --- */
 const todayKey = "kdr-" + new Date().toISOString().slice(0, 10);
@@ -183,7 +187,10 @@ let consumableCount = saved.consumableCount ?? 0;
 let deathValue = saved.deathValue ?? 128000;
 let consumableValue = saved.consumableValue ?? 25000;
 let itemValue = saved.itemValue ?? 96000; 
+let highestKill = saved.highestKill ?? 0;
+let lowestKill = saved.lowestKill ?? null;
 let historyStack = [];
+
 /* --- Sound Handler --- */
 function playSFX(audioId) {
     const sound = document.getElementById(audioId);
@@ -192,14 +199,23 @@ function playSFX(audioId) {
         sound.play().catch(e => console.error("Audio playback error:", e));
     }
 }
+
 /* --- UI Update --- */
 function updateDisplay() {
     let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
+    
+    // Total formatting (Red if below 0)
+    let totalColorStyle = total < 0 ? 'style="color: #ff5555; font-weight: bold;"' : '';
+    
+    // K/D formatting (Red if less than 1.00)
+    let kdColorStyle = parseFloat(kd) < 1.00 ? 'style="color: #ff5555; font-weight: bold;"' : '';
+
     document.getElementById("stats").innerHTML =
-        "Total: " + total.toLocaleString() + "<br>" +
+        "Total: <span " + totalColorStyle + ">" + total.toLocaleString() + " GP</span><br>" +
         "Kills: " + kills + "<br>" +
         "Deaths: " + deaths + "<br>" +
-        "K/D Ratio: " + kd;
+        "K/D Ratio: <span " + kdColorStyle + ">" + kd + "</span>";
+        
     document.getElementById("itemLog").innerHTML =
         "<strong>Item Losses:</strong> " + itemLossCount;
     document.querySelector("#deathBtn span").textContent =
@@ -211,6 +227,7 @@ function updateDisplay() {
     document.getElementById("consumableLog").innerHTML =
         "Consumables Burnt : " + consumableCount;
 }
+
 /* --- Helpers --- */
 function saveState() {
     historyStack.push({
@@ -221,9 +238,12 @@ function saveState() {
         itemValue,
         consumableCount,
         deathValue,
-        consumableValue
+        consumableValue,
+        highestKill,
+        lowestKill
     });
 }
+
 function saveLocal() {
     localStorage.setItem(todayKey, JSON.stringify({
         total,
@@ -233,7 +253,9 @@ function saveLocal() {
         itemValue,
         consumableCount,
         deathValue,
-        consumableValue
+        consumableValue,
+        highestKill,
+        lowestKill
     }));
 }
 function parseInput(input) {
@@ -244,6 +266,7 @@ function parseInput(input) {
     if (!isNaN(num)) return num * 1000;
     return NaN;
 }
+
 /* --- Kill Add --- */
 function addKill() {
     let raw = document.getElementById("killInput").value;
@@ -252,6 +275,14 @@ function addKill() {
         saveState();
         total += parsed;
         kills++;
+
+        if (parsed > highestKill) {
+            highestKill = parsed;
+        }
+        if (lowestKill === null || parsed < lowestKill) {
+            lowestKill = parsed;
+        }
+
         playSFX("killSound");
         saveLocal();
         updateDisplay();
@@ -264,6 +295,7 @@ document.getElementById("killAddBtn").onclick = addKill;
 document.getElementById("killInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addKill();
 });
+
 /* --- Death --- */
 document.getElementById("deathBtn").onclick = () => {
     saveState();
@@ -273,6 +305,7 @@ document.getElementById("deathBtn").onclick = () => {
     updateDisplay();
     playSFX("failSound");
 };
+
 /* --- Item Loss --- */
 document.getElementById("itemBtn").onclick = () => {
     saveState();
@@ -282,6 +315,7 @@ document.getElementById("itemBtn").onclick = () => {
     updateDisplay();
     playSFX("CrySound");
 };
+
 /* --- Consumable Consumption --- */
 document.getElementById("ConsumableBtn").onclick = () => {
     saveState();
@@ -291,6 +325,7 @@ document.getElementById("ConsumableBtn").onclick = () => {
     playSFX("EatSound");
     updateDisplay();
 };
+
 /* --- Undo --- */
 document.getElementById("undoBtn").onclick = () => {
     if (historyStack.length === 0) {
@@ -306,12 +341,14 @@ document.getElementById("undoBtn").onclick = () => {
     deathValue = prev.deathValue;
     consumableValue = prev.consumableValue ?? 25000;
     itemValue = prev.itemValue ?? 96000;
-    
+    highestKill = prev.highestKill ?? 0;
+    lowestKill = prev.lowestKill ?? null;
     saveLocal();
     playSFX("UndoSound");
     updateDisplay();
 };
-/* --- Reset (Inside Settings Panel) --- */
+
+/* --- Reset --- */
 document.getElementById("resetBtn").onclick = () => {
     if (!confirm("Are you sure you want to clear all of today's data?")) {
         return;
@@ -322,11 +359,14 @@ document.getElementById("resetBtn").onclick = () => {
     deaths = 0;
     itemLossCount = 0;
     consumableCount = 0;
+    highestKill = 0;
+    lowestKill = null;
     saveLocal();
     updateDisplay();
     alert("Today's data has been reset.");
 };
-/* --- Panels --- */
+
+/* --- Visual Panel Toggles --- */
 function togglePanel(id) {
     const panel = document.getElementById(id);
     panel.style.display = panel.style.display === "none" ? "block" : "none";
@@ -334,20 +374,19 @@ function togglePanel(id) {
 document.getElementById("settingsBtn").onclick = () => togglePanel("settingsPanel");
 document.getElementById("historyBtn").onclick = () => {
     const panel = document.getElementById("historyPanel");
-    panel.style.display =
-        (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
+    panel.style.display = (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
     if (panel.style.display === "block") {
         loadHistory();
     }
 };
-/* --- Settings --- */
+
+/* --- Configuration Settings Save --- */
 document.getElementById("saveSettingsBtn").onclick = () => {
     let deathParsed = parseInput(document.getElementById("deathInput").value);
     let consumableParsed = parseInput(document.getElementById("consumableInput").value);
     let itemParsed = parseInput(document.getElementById("itemInput").value);
     
     saveState();
-    
     if (!isNaN(deathParsed)) deathValue = deathParsed;
     if (!isNaN(consumableParsed)) consumableValue = consumableParsed;
     if (!isNaN(itemParsed)) itemValue = itemParsed;
@@ -358,26 +397,18 @@ document.getElementById("saveSettingsBtn").onclick = () => {
     document.getElementById("deathInput").value = "";
     document.getElementById("consumableInput").value = "";
     document.getElementById("itemInput").value = "";
-   
     alert("Settings updated.");
 };
-/* --- History --- */
+
+/* --- Render History Data Table --- */
 function loadHistory() {
     document.getElementById("historyTable").innerHTML = "";
     let keys = Object.keys(localStorage).filter(k => /^kdr-\d{4}-\d{2}-\d{2}$/.test(k));
     keys.sort();
-
-    let sumTotal = 0;
-    let sumKills = 0;
-    let sumDeaths = 0;
-    let sumItemLosses = 0;
-    let sumItemLossValue = 0;
-    let sumConsumables = 0;
-    let sumConsumableValue = 0;
-
+    let sumTotal = 0, sumKills = 0, sumDeaths = 0, sumItemLosses = 0, sumItemLossValue = 0, sumConsumables = 0, sumConsumableValue = 0;
+    
     let rows = keys.map(k => {
         let d = JSON.parse(localStorage.getItem(k));
-
         let rowTotal = d.total ?? 0;
         let rowKills = d.kills ?? 0;
         let rowDeaths = d.deaths ?? 0;
@@ -385,6 +416,9 @@ function loadHistory() {
         let rowItemVal = rowItems * (d.itemValue ?? 96000);
         let rowConsumables = d.consumableCount ?? 0;
         let rowConsumableVal = rowConsumables * (d.consumableValue ?? 25000);
+        
+        let displayMax = d.highestKill ? d.highestKill.toLocaleString() + " GP" : "-";
+        let displayMin = d.lowestKill ? d.lowestKill.toLocaleString() + " GP" : "-";
 
         sumTotal += rowTotal;
         sumKills += rowKills;
@@ -393,13 +427,15 @@ function loadHistory() {
         sumItemLossValue += rowItemVal;
         sumConsumables += rowConsumables;
         sumConsumableValue += rowConsumableVal;
-
+        
         return `
             <tr>
-                <td>${k.replace("kdr-", "")}</td>
-                <td>${rowTotal.toLocaleString()}</td>
+                <td>${(() => {const [year, month, day] = k.replace("kdr-", "").split("-");return `${day}-${month}-${year}`;})()}</td>
+                <td ${rowTotal < 0 ? 'style="color: #ff5555; font-weight: bold;"' : ''}>${rowTotal.toLocaleString()}</td>
                 <td>${rowKills}</td>
                 <td>${rowDeaths}</td>
+                <td>${displayMin}</td>
+                <td>${displayMax}</td>
                 <td>${rowItems} (-${rowItemVal.toLocaleString()} GP)</td>
                 <td>${rowConsumables} (-${rowConsumableVal.toLocaleString()} GP)</td>
             </tr>
@@ -414,6 +450,8 @@ function loadHistory() {
                     <th>Total</th>
                     <th>Kills</th>
                     <th>Deaths</th>
+                    <th>Lowest Key</th>
+                    <th>Highest Key</th>
                     <th>Item Losses (GP)</th>
                     <th>Consumables (GP)</th>
                 </tr>
@@ -422,43 +460,28 @@ function loadHistory() {
                 ${rows}
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; background: #2b2416; border-top: 2px solid #c9a441;">
-                    <td>All Time Total</td>
-                    <td>${sumTotal.toLocaleString()} GP</td>
-                    <td>${sumKills}</td>
-                    <td>${sumDeaths}</td>
-                    <td>${sumItemLosses} (-${sumItemLossValue.toLocaleString()} GP)</td>
-                    <td>${sumConsumables} (-${sumConsumableValue.toLocaleString()} GP)</td>
-                </tr>
-            </tfoot>
+    <tr style="font-weight: bold; background: #2b2416; border-top: 2px solid #c9a441;">
+        <td>All Time Total</td>
+        <td ${sumTotal < 0 ? 'style="color: #ff5555; font-weight: bold;"' : ''}>${sumTotal.toLocaleString()} GP</td>
+        <td>${sumKills}</td>
+        <td>${sumDeaths}</td>
+        <td>-</td>
+        <td>-</td>
+        <td>${sumItemLosses} (-${sumItemLossValue.toLocaleString()} GP)</td>
+        <td>${sumConsumables} (-${sumConsumableValue.toLocaleString()} GP)</td>
+    </tr>
+</tfoot>
         </table>
     `;
 }
-/* --- Export CSV --- */
-document.getElementById("exportCSV").onclick = () => {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
-    keys.sort();
-    let csv = "Date,Total,Kills,Deaths,ItemLosses,Consumables\n";
-    keys.forEach(k => {
-        const raw = localStorage.getItem(k);
-        let d;
-        try { d = JSON.parse(raw); } catch { return; }
-        csv += `${k.replace("kdr-", "")};${d.total ?? 0};${d.kills ?? 0};${d.deaths ?? 0};${d.itemLossCount ?? 0};${d.consumableCount ?? 0}\n`;
-    });
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "kdr_history.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-};
+
+
 /* --- Export Excel (REAL XLSX) --- */
 document.getElementById("exportExcel").onclick = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("kdr-"));
     keys.sort();
     
-    const rows = [["Date", "Total GP", "Kills", "Deaths", "Item Losses", "Item Loss GP", "Consumables", "Consumables GP"]];
+    const rows = [["Date", "Total GP", "Kills", "Deaths", "Lowest Key", "Highest Key", "Item Losses", "Item Loss GP", "Consumables", "Consumables GP"]];
     
     keys.forEach(k => {
         const raw = localStorage.getItem(k);
@@ -469,12 +492,14 @@ document.getElementById("exportExcel").onclick = () => {
         let itemGP = itemQty * (d.itemValue ?? 96000);
         let conQty = d.consumableCount ?? 0;
         let conGP = conQty * (d.consumableValue ?? 25000);
-
+        
         rows.push([
             k.replace("kdr-", ""),
             d.total ?? 0,
             d.kills ?? 0,
             d.deaths ?? 0,
+            d.lowestKill ?? "-",
+            d.highestKill ?? "-",
             itemQty,
             -itemGP,
             conQty,
