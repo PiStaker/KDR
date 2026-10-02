@@ -203,11 +203,19 @@ function playSFX(audioId) {
 /* --- UI Update --- */
 function updateDisplay() {
     let kd = deaths === 0 ? kills : (kills / deaths).toFixed(2);
+    
+    // Total formatting (Red if below 0)
+    let totalColorStyle = total < 0 ? 'style="color: #ff5555; font-weight: bold;"' : '';
+    
+    // K/D formatting (Red if less than 1.00)
+    let kdColorStyle = parseFloat(kd) < 1.00 ? 'style="color: #ff5555; font-weight: bold;"' : '';
+
     document.getElementById("stats").innerHTML =
-        "Total: " + total.toLocaleString() + "<br>" +
+        "Total: <span " + totalColorStyle + ">" + total.toLocaleString() + " GP</span><br>" +
         "Kills: " + kills + "<br>" +
         "Deaths: " + deaths + "<br>" +
-        "K/D Ratio: " + kd;
+        "K/D Ratio: <span " + kdColorStyle + ">" + kd + "</span>";
+        
     document.getElementById("itemLog").innerHTML =
         "<strong>Item Losses:</strong> " + itemLossCount;
     document.querySelector("#deathBtn span").textContent =
@@ -423,7 +431,7 @@ function loadHistory() {
         return `
             <tr>
                 <td>${(() => {const [year, month, day] = k.replace("kdr-", "").split("-");return `${day}-${month}-${year}`;})()}</td>
-                <td>${rowTotal.toLocaleString()}</td>
+                <td ${rowTotal < 0 ? 'style="color: #ff5555; font-weight: bold;"' : ''}>${rowTotal.toLocaleString()}</td>
                 <td>${rowKills}</td>
                 <td>${rowDeaths}</td>
                 <td>${displayMin}</td>
@@ -454,7 +462,7 @@ function loadHistory() {
             <tfoot>
     <tr style="font-weight: bold; background: #2b2416; border-top: 2px solid #c9a441;">
         <td>All Time Total</td>
-        <td>${sumTotal.toLocaleString()} GP</td>
+        <td ${sumTotal < 0 ? 'style="color: #ff5555; font-weight: bold;"' : ''}>${sumTotal.toLocaleString()} GP</td>
         <td>${sumKills}</td>
         <td>${sumDeaths}</td>
         <td>-</td>
