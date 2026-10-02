@@ -422,7 +422,7 @@ function loadHistory() {
         
         return `
             <tr>
-                <td>${k.replace("kdr-", "")}</td>
+                <td>${(() => {const [year, month, day] = k.replace("kdr-", "").split("-");return `${day}-${month}-${year}`;})()}</td>
                 <td>${rowTotal.toLocaleString()}</td>
                 <td>${rowKills}</td>
                 <td>${rowDeaths}</td>
