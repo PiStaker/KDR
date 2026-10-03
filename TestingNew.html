@@ -408,11 +408,29 @@ function togglePanel(id) {
 }
 document.getElementById("settingsBtn").onclick = () => togglePanel("settingsPanel");
 document.getElementById("historyBtn").onclick = () => {
-    const panel = document.getElementById("historyPanel");
-    panel.style.display = (panel.style.display === "none" || panel.style.display === "") ? "block" : "none";
-    if (panel.style.display === "block") {
-        loadHistory();
-    }
+ 
+const historyPanel =
+document.getElementById("historyPanel");
+ 
+const statisticsPanel =
+document.getElementById("statisticsPanel");
+ 
+const showing =
+historyPanel.style.display === "block";
+ 
+if (showing) {
+ 
+historyPanel.style.display = "none";
+ 
+// Close statistics too
+statisticsPanel.style.display = "none";
+ 
+} else {
+ 
+historyPanel.style.display = "block";
+ 
+loadHistory();
+}
 };
 
 
