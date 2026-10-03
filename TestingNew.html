@@ -560,7 +560,25 @@ const d = JSON.parse(localStorage.getItem(k));
 totalKills += d.kills ?? 0;
 totalDeaths += d.deaths ?? 0;
  
-totalGpEarned += d.grossKillValue ?? 0;
+const deathLoss =
+(d.deaths ?? 0) *
+(d.deathValue ?? 128000);
+ 
+const itemLoss =
+(d.itemLossCount ?? 0) *
+(d.itemLossValue ?? 96000);
+ 
+const consumableLoss =
+(d.consumableCount ?? 0) *
+(d.consumableValue ?? 25000);
+ 
+const earnedFromKeys =
+(d.total ?? 0) +
+deathLoss +
+itemLoss +
+consumableLoss;
+ 
+totalGpEarned += earnedFromKeys;
  
 totalDeathGp +=
 (d.deaths ?? 0) *
